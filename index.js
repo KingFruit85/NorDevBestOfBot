@@ -5,6 +5,7 @@ const {
   Collection,
   GatewayIntentBits,
   Partials,
+  Events,
 } = require("discord.js");
 const client = new Client({
   intents: [
@@ -29,6 +30,36 @@ for (const file of eventFiles) {
     client.on(event.name, (...args) => event.execute(...args));
   }
 }
+
+// Just mocking the voting behavior
+const holdingTable = {};
+const bestOfTable = {};
+
+client.on(Events.InteractionCreate, (interaction) => {
+  if (!interaction.isButton()) return;
+
+  let vote = interaction.customId.split("-")[0].trim();
+  let key = interaction.customId.split("-")[1].trim();
+  console.log(interaction.message.components[0].components[1]);
+
+  if (!(key in holdingTable)) {
+    holdingTable[key] = 0;
+  }
+
+  if (vote === "YesVote") {
+    holdingTable[key]++;
+    interaction.message.components[0].components[0].disabled = true; // This doesn't work
+  }
+
+  if (vote === "NoVote") {
+    holdingTable[key]--;
+    interaction.message.components[0].components[1].disabled = true; // This doesn't work
+  }
+
+  if (holdingTable[key] >= 5 && !(key in bestOfTable)) {
+    bestOfTable[key] = 1;
+  }
+});
 
 client.commands = new Collection();
 
