@@ -74,7 +74,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await holdingTable.set(key, currentValue + 1);
 
     if (currentValue + 1 >= 5) {
-      await bestOfTable.set(key, "placeholder");
+      let channel = interaction.client.channels.cache.get(
+        key.split("/")[key.split("/").length - 2]
+      );
+
+      let message = await channel.messages.fetch(
+        key.split("/")[key.split("/").length - 1]
+      );
+
+      await bestOfTable.set(key, JSON.stringify(message)); // Placeholder should me full message as JSON maybe?
     }
   }
 

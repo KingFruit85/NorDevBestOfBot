@@ -42,7 +42,6 @@ module.exports = {
     let channel = interaction.client.channels.cache.get(channelId);
     // Retrieve the message using the message ID
     let message = await channel.messages.fetch(messageId);
-
     const exampleEmbed = new EmbedBuilder()
       .setDescription(message.content)
       .setAuthor({
@@ -56,20 +55,19 @@ module.exports = {
         .setLabel("Vote For Message")
         .setCustomId(`YesVote - ${input}`)
         .setStyle(ButtonStyle.Success)
-        .setEmoji("🦀"),
+        .setEmoji("👍"),
       new ButtonBuilder()
         .setLabel("Vote Against Message")
         .setCustomId(`NoVote - ${input}`)
         .setStyle(ButtonStyle.Danger)
+        .setEmoji("👎")
     );
 
     let alreadyInBestOfMsg = "";
     let yetToBeAddedMsg = "";
 
     await interaction.reply({
-      content: `${requestingUser} has nominated the following message to be added to the best of list, but it still requires ${
-        RequiredEmojiCount - count
-      } votes`,
+      content: `${requestingUser} has nominated the following message to be added to the best of list, but it still requires ${"PLACEHOLDER"} votes`,
       embeds: [exampleEmbed],
       components: [row],
     });
