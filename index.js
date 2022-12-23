@@ -16,6 +16,27 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 const dotenv = require("dotenv");
+dotenv.config();
+const KeyvMongo = require("@keyvhq/mongo");
+const Keyv = require("keyv");
+
+const holdingTable = new Keyv({
+  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
+    collection: "holdingtable",
+  }),
+});
+
+const bestOfTable = new Keyv({
+  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
+    collection: "bestoftable",
+  }),
+});
+
+holdingTable.on("error", (err) => console.error("Keyv connection error:", err));
+bestOfTable.on("error", (err) => console.error("Keyv connection error:", err));
+
+client.login(process.env.DISCORD_TOKEN);
+
 const eventsPath = path.join(__dirname, "events");
 const eventFiles = fs
   .readdirSync(eventsPath)
@@ -31,33 +52,35 @@ for (const file of eventFiles) {
   }
 }
 
-// Just mocking the voting behavior
-const holdingTable = {};
-const bestOfTable = {};
-
-client.on(Events.InteractionCreate, (interaction) => {
+client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
 
   let vote = interaction.customId.split("-")[0].trim();
   let key = interaction.customId.split("-")[1].trim();
-  console.log(interaction.message.components[0].components[1]);
 
-  if (!(key in holdingTable)) {
-    holdingTable[key] = 0;
+  if (await bestOfTable.get(key)) {
+    return; // Should probably return message to the user
+  }
+
+  let keyInHolding = await holdingTable.get(key);
+
+  // If the comment has never been nominated before add an initial record
+  if (!keyInHolding) {
+    await holdingTable.set(key, 0);
   }
 
   if (vote === "YesVote") {
-    holdingTable[key]++;
-    interaction.message.components[0].components[0].disabled = true; // This doesn't work
+    let currentValue = await holdingTable.get(key);
+    await holdingTable.set(key, currentValue + 1);
+
+    if (currentValue + 1 >= 5) {
+      await bestOfTable.set(key, "placeholder");
+    }
   }
 
   if (vote === "NoVote") {
-    holdingTable[key]--;
-    interaction.message.components[0].components[1].disabled = true; // This doesn't work
-  }
-
-  if (holdingTable[key] >= 5 && !(key in bestOfTable)) {
-    bestOfTable[key] = 1;
+    let currentValue = await holdingTable.get(key);
+    await holdingTable.set(key, currentValue - 1);
   }
 });
 
@@ -80,6 +103,3 @@ for (const file of commandFiles) {
     );
   }
 }
-
-dotenv.config();
-client.login(process.env.DISCORD_TOKEN);

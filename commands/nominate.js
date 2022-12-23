@@ -26,6 +26,7 @@ module.exports = {
     let serverId = input.split("/")[input.split("/").length - 3];
 
     // Should probably check if it's already on the best of list right?
+
     if (
       messageId.length === 0 ||
       channelId.length === 0 ||
@@ -62,12 +63,8 @@ module.exports = {
         .setStyle(ButtonStyle.Danger)
     );
 
-    let count = 0;
-    message.reactions.cache.forEach((element) => {
-      if (element._emoji.name === "👀") {
-        count = element.count;
-      }
-    });
+    let alreadyInBestOfMsg = "";
+    let yetToBeAddedMsg = "";
 
     await interaction.reply({
       content: `${requestingUser} has nominated the following message to be added to the best of list, but it still requires ${
