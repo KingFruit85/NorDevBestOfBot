@@ -6,6 +6,16 @@ const {
   ButtonStyle,
 } = require("discord.js");
 const RequiredEmojiCount = 5;
+const dotenv = require("dotenv");
+dotenv.config();
+const KeyvMongo = require("@keyvhq/mongo");
+const Keyv = require("keyv");
+const bestOfTable = new Keyv({
+  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
+    collection: "bestoftable",
+  }),
+});
+bestOfTable.on("error", (err) => console.error("Keyv connection error:", err));
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -26,6 +36,13 @@ module.exports = {
     let serverId = input.split("/")[input.split("/").length - 3];
 
     // Should probably check if it's already on the best of list right?
+
+    if (await bestOfTable.get(input)) {
+      await interaction.reply({
+        content: "This comment has already been added to the best of table",
+        ephemeral: true,
+      });
+    }
 
     if (
       messageId.length === 0 ||
