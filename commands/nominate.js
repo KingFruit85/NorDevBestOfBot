@@ -5,16 +5,24 @@ const {
   ButtonBuilder,
   ButtonStyle,
 } = require("discord.js");
-const RequiredEmojiCount = 5;
+
 const dotenv = require("dotenv");
 dotenv.config();
 const KeyvMongo = require("@keyvhq/mongo");
 const Keyv = require("keyv");
+
 const bestOfTable = new Keyv({
   store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
     collection: "bestoftable",
   }),
 });
+
+const holdingTable = new Keyv({
+  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
+    collection: "holdingtable",
+  }),
+});
+
 bestOfTable.on("error", (err) => console.error("Keyv connection error:", err));
 
 module.exports = {
@@ -30,18 +38,21 @@ module.exports = {
 
   async execute(interaction) {
     let requestingUser = interaction.member.user;
-    let input = interaction.options.getString("input"); // Input should be a message link
+    let input = interaction.options.getString("input");
     let messageId = input.split("/")[input.split("/").length - 1];
     let channelId = input.split("/")[input.split("/").length - 2];
     let serverId = input.split("/")[input.split("/").length - 3];
-
-    // Should probably check if it's already on the best of list right?
 
     if (await bestOfTable.get(input)) {
       await interaction.reply({
         content: "This comment has already been added to the best of table",
         ephemeral: true,
       });
+    }
+
+    let currentNumberOfVotes = 0;
+    if (await holdingTable.get(input)) {
+      currentNumberOfVotes = await holdingTable.get(input);
     }
 
     if (
@@ -59,8 +70,18 @@ module.exports = {
     let channel = interaction.client.channels.cache.get(channelId);
     // Retrieve the message using the message ID
     let message = await channel.messages.fetch(messageId);
-    const exampleEmbed = new EmbedBuilder()
-      .setDescription(message.content)
+
+    // This happens if the message is an image  I think
+    if (message.content.length <= 0) {
+      interaction.reply({
+        content: "You can't nominate a message that doesn't include text",
+        ephemeral: true,
+      });
+    }
+
+    // also embed images?
+    const nominatedMessage = new EmbedBuilder()
+      .setDescription(message.content || " ")
       .setAuthor({
         name: message.author.username,
         iconURL: message.author.displayAvatarURL(),
@@ -69,23 +90,20 @@ module.exports = {
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("Vote For Message")
+        .setLabel("I Agree!")
         .setCustomId(`YesVote - ${input}`)
         .setStyle(ButtonStyle.Success)
         .setEmoji("👍"),
       new ButtonBuilder()
-        .setLabel("Vote Against Message")
+        .setLabel("I Disagree")
         .setCustomId(`NoVote - ${input}`)
         .setStyle(ButtonStyle.Danger)
         .setEmoji("👎")
     );
 
-    let alreadyInBestOfMsg = "";
-    let yetToBeAddedMsg = "";
-
     await interaction.reply({
-      content: `${requestingUser} has nominated the following message to be added to the best of list, but it still requires ${"PLACEHOLDER"} votes`,
-      embeds: [exampleEmbed],
+      content: `${requestingUser} has nominated the following message to be added to the best of list`,
+      embeds: [nominatedMessage],
       components: [row],
     });
   },

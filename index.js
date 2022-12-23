@@ -6,6 +6,7 @@ const {
   GatewayIntentBits,
   Partials,
   Events,
+  EmbedBuilder,
 } = require("discord.js");
 const client = new Client({
   intents: [
@@ -32,8 +33,17 @@ const bestOfTable = new Keyv({
   }),
 });
 
+const voteHistoryTable = new Keyv({
+  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
+    collection: "votehistorytable",
+  }),
+});
+
 holdingTable.on("error", (err) => console.error("Keyv connection error:", err));
 bestOfTable.on("error", (err) => console.error("Keyv connection error:", err));
+voteHistoryTable.on("error", (err) =>
+  console.error("Keyv connection error:", err)
+);
 
 client.login(process.env.DISCORD_TOKEN);
 
@@ -52,17 +62,61 @@ for (const file of eventFiles) {
   }
 }
 
+const alreadyVoted = new EmbedBuilder().setDescription(
+  "You have already voted"
+);
+const yesVote = new EmbedBuilder().setDescription(
+  "Your 👍 vote has been recorded, cheers!"
+);
+
+const noVote = new EmbedBuilder().setDescription(
+  "You 👎 has been recorded, cheers!"
+);
+
+const alreadyOnBestOf = new EmbedBuilder().setDescription(
+  "This comment is already in the best of list!"
+);
+
+const passedIntoBestOf = new EmbedBuilder().setDescription(
+  "Your vote was the final needed to add this comment to the best of list, nice work!"
+);
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
+
+  console.log(interaction.user.id);
 
   let vote = interaction.customId.split("-")[0].trim();
   let key = interaction.customId.split("-")[1].trim();
 
   if (await bestOfTable.get(key)) {
-    return; // Should probably return message to the user
+    interaction
+      .reply({ embeds: [alreadyOnBestOf], ephemeral: true })
+      .catch(console.error);
   }
 
   let keyInHolding = await holdingTable.get(key);
+
+  let messageAlreadyHasVotes = await voteHistoryTable.get(key);
+  let voters = [];
+
+  if (!messageAlreadyHasVotes) {
+    voters.push(interaction.user.id);
+  }
+
+  if (messageAlreadyHasVotes) {
+    voters = JSON.parse(messageAlreadyHasVotes);
+  }
+
+  if (messageAlreadyHasVotes && voters.includes(interaction.user.id)) {
+    interaction
+      .reply({ embeds: [alreadyVoted], ephemeral: true })
+      .catch(console.error);
+  }
+
+  if (messageAlreadyHasVotes && !voters.includes(interaction.user.id)) {
+    voters.push(interaction.user.id);
+  }
 
   // If the comment has never been nominated before add an initial record
   if (!keyInHolding) {
@@ -71,8 +125,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (vote === "YesVote") {
     let currentValue = await holdingTable.get(key);
-    await holdingTable.set(key, currentValue + 1);
 
+    // Enough votes to move into bestof
     if (currentValue + 1 >= 5) {
       let channel = interaction.client.channels.cache.get(
         key.split("/")[key.split("/").length - 2]
@@ -82,14 +136,46 @@ client.on(Events.InteractionCreate, async (interaction) => {
         key.split("/")[key.split("/").length - 1]
       );
 
-      await bestOfTable.set(key, JSON.stringify(message)); // Placeholder should me full message as JSON maybe?
+      // Add comment to best of table
+      await bestOfTable.set(key, JSON.stringify(message));
+
+      // Delete holding record
+      await holdingTable.delete(key);
+
+      const successMessage = new EmbedBuilder()
+        .setDescription(message.content || " ")
+        .setAuthor({
+          name: message.author.username,
+          iconURL: message.author.displayAvatarURL(),
+        })
+        .setColor("#FCB900");
+
+      channel.send({
+        content: `Enough votes have been collected to move ${message.author.username}'s message into the best of list, woo-hoo!`,
+        embeds: [successMessage],
+      });
+
+      interaction
+        .reply({ embeds: [passedIntoBestOf], ephemeral: true })
+        .catch(console.error);
     }
+
+    // Just increment the vote
+    await holdingTable.set(key, currentValue + 1);
+    interaction
+      .reply({ embeds: [yesVote], ephemeral: true })
+      .catch(console.error);
   }
 
   if (vote === "NoVote") {
     let currentValue = await holdingTable.get(key);
     await holdingTable.set(key, currentValue - 1);
+    interaction
+      .reply({ embeds: [noVote], ephemeral: true })
+      .catch(console.error);
   }
+
+  await voteHistoryTable.set(key, JSON.stringify(voters));
 });
 
 client.commands = new Collection();
