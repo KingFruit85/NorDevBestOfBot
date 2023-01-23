@@ -8,6 +8,7 @@ const {
   Events,
   EmbedBuilder,
 } = require("discord.js");
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -16,34 +17,18 @@ const client = new Client({
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
+
+const Comment = require("./events/database/models");
 const dotenv = require("dotenv");
 dotenv.config();
-const KeyvMongo = require("@keyvhq/mongo");
-const Keyv = require("keyv");
 
-const holdingTable = new Keyv({
-  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
-    collection: "holdingtable",
-  }),
+const mongoose = require("mongoose");
+mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
+const db = mongoose.connection;
+db.on("error", console.error.bind(console, "connection error: "));
+db.once("open", function () {
+  console.log("Connected successfully");
 });
-
-const bestOfTable = new Keyv({
-  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
-    collection: "bestoftable",
-  }),
-});
-
-const voteHistoryTable = new Keyv({
-  store: new KeyvMongo(process.env.DATABASE_CONNECTION_STRING, {
-    collection: "votehistorytable",
-  }),
-});
-
-holdingTable.on("error", (err) => console.error("Keyv connection error:", err));
-bestOfTable.on("error", (err) => console.error("Keyv connection error:", err));
-voteHistoryTable.on("error", (err) =>
-  console.error("Keyv connection error:", err)
-);
 
 client.login(process.env.DISCORD_TOKEN);
 
@@ -83,99 +68,53 @@ const passedIntoBestOf = new EmbedBuilder().setDescription(
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
-
-  console.log(interaction.user.id);
-
   let vote = interaction.customId.split("-")[0].trim();
   let key = interaction.customId.split("-")[1].trim();
-
-  if (await bestOfTable.get(key)) {
-    interaction
-      .reply({ embeds: [alreadyOnBestOf], ephemeral: true })
-      .catch(console.error);
-  }
-
-  let keyInHolding = await holdingTable.get(key);
-
-  let messageAlreadyHasVotes = await voteHistoryTable.get(key);
-  let voters = [];
-
-  if (!messageAlreadyHasVotes) {
-    voters.push(interaction.user.id);
-  }
-
-  if (messageAlreadyHasVotes) {
-    voters = JSON.parse(messageAlreadyHasVotes);
-  }
-
-  if (messageAlreadyHasVotes && voters.includes(interaction.user.id)) {
-    interaction
-      .reply({ embeds: [alreadyVoted], ephemeral: true })
-      .catch(console.error);
-  }
-
-  if (messageAlreadyHasVotes && !voters.includes(interaction.user.id)) {
-    voters.push(interaction.user.id);
-  }
+  let messageIdValue = key.split("/")[key.split("/").length - 1];
+  let channelIdValue = key.split("/")[key.split("/").length - 2];
+  let serverIdValue = key.split("/")[key.split("/").length - 3];
+  let channel = interaction.client.channels.cache.get(channelIdValue);
+  let message = await channel.messages.fetch(messageIdValue);
 
   // If the comment has never been nominated before add an initial record
-  if (!keyInHolding) {
-    await holdingTable.set(key, 0);
-  }
+  const record = await db
+    .collection("Comments")
+    .findOne({ messageId: messageIdValue });
 
-  if (vote === "YesVote") {
-    let currentValue = await holdingTable.get(key);
+  const filter = { messageId: messageIdValue };
+  if (record) {
+    console.log("Found record!");
 
-    // Enough votes to move into bestof
-    if (currentValue + 1 >= 5) {
-      let channel = interaction.client.channels.cache.get(
-        key.split("/")[key.split("/").length - 2]
-      );
-
-      let message = await channel.messages.fetch(
-        key.split("/")[key.split("/").length - 1]
-      );
-
-      // Add comment to best of table
-      await bestOfTable.set(key, JSON.stringify(message));
-
-      // Delete holding record
-      await holdingTable.delete(key);
-
-      const successMessage = new EmbedBuilder()
-        .setDescription(message.content || " ")
-        .setAuthor({
-          name: message.author.username,
-          iconURL: message.author.displayAvatarURL(),
-        })
-        .setColor("#FCB900");
-
-      channel.send({
-        content: `Enough votes have been collected to move ${message.author.username}'s message into the best of list, woo-hoo!`,
-        embeds: [successMessage],
+    if (vote === "YesVote") {
+      await db.collection("Comments").findOneAndUpdate(filter, {
+        $set: { voteCount: record.voteCount + 1 },
       });
-
-      interaction
-        .reply({ embeds: [passedIntoBestOf], ephemeral: true })
-        .catch(console.error);
     }
 
-    // Just increment the vote
-    await holdingTable.set(key, currentValue + 1);
-    interaction
-      .reply({ embeds: [yesVote], ephemeral: true })
-      .catch(console.error);
-  }
+    if (vote === "NoVote") {
+      await db.collection("Comments").findOneAndUpdate(filter, {
+        $set: { voteCount: record.voteCount - 1 },
+      });
+    }
+  } else {
+    console.log("didn't find record, adding new one!");
 
-  if (vote === "NoVote") {
-    let currentValue = await holdingTable.get(key);
-    await holdingTable.set(key, currentValue - 1);
-    interaction
-      .reply({ embeds: [noVote], ephemeral: true })
-      .catch(console.error);
-  }
+    const newRecord = new Comment({
+      messageId: messageIdValue,
+      serverId: serverIdValue,
+      userName: message.author.username,
+      comment: message.content,
+      voteCount: 1,
+      iconUrl: message.author.avatarURL({ format: "png", size: 128 }),
+      dateOfSubmission: new Date(),
+    });
 
-  await voteHistoryTable.set(key, JSON.stringify(voters));
+    db.collection("Comments").insertOne(newRecord);
+  }
+  await interaction.reply({
+    content: "Thanks for the vote dickhead",
+    ephemeral: true,
+  });
 });
 
 client.commands = new Collection();
