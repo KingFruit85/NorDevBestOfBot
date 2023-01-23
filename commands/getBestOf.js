@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, User } = require("discord.js");
 const AsciiTable = require("ascii-table");
 const dotenv = require("dotenv");
 
@@ -22,18 +22,50 @@ module.exports = {
       .collection("Comments")
       .find()
       .sort({ voteCount: -1 })
-      .limit(10)
+      .limit(5)
       .toArray();
 
-    let msgs = [];
+    const date = new Date();
+    const month = date.toLocaleString("default", { month: "long" });
+    const year = date.getFullYear();
 
-    var table = new AsciiTable();
+    const exampleEmbed = new EmbedBuilder()
+      .setColor([255, 0, 255])
+      .setTitle(`The top 5 comments from ${month} ${year}`)
+
+      .addFields(
+        { name: "User", value: " ", inline: true },
+        { name: "Votes", value: " ", inline: true },
+        { name: "Comment", value: " ", inline: true }
+      )
+      .setThumbnail(
+        "https://cdn.discordapp.com/attachments/680873189106384988/1065930668825116682/PXL_20230120_094737132.jpg"
+      )
+
+      .setTimestamp();
+
     topComments.forEach((post) => {
-      table.addRow(post.voteCount, post.userName, post.comment);
+      exampleEmbed.addFields(
+        {
+          name: " ",
+          value: post.userName,
+          inline: true,
+        },
+        {
+          name: " ",
+          value: post.voteCount.toString(),
+          inline: true,
+        },
+        {
+          name: " ",
+          value: post.comment,
+          inline: true,
+        }
+      );
     });
 
     await interaction.reply({
-      content: "```" + table.removeBorder().toString() + "```",
+      embeds: [exampleEmbed],
     });
   },
 };
