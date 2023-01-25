@@ -29,6 +29,10 @@ const CommentSchema = new mongoose.Schema({
     type: Date,
     required: false,
   },
+  voters: {
+    type: Array,
+    required: true,
+  },
 });
 
 const Comments =

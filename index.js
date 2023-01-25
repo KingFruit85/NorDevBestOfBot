@@ -81,19 +81,31 @@ client.on(Events.InteractionCreate, async (interaction) => {
     .collection("Comments")
     .findOne({ messageId: messageIdValue });
 
+  let votersValue = record ? record.voters : [];
+
+  if (votersValue.includes(interaction.user.username)) {
+    console.log("User already voted!");
+    return await interaction.reply({
+      content: "You have already voted for this message, you cannot vote again",
+      ephemeral: true,
+    });
+  }
+
+  votersValue.push(interaction.user.username);
+
   const filter = { messageId: messageIdValue };
   if (record) {
     console.log("Found record!");
 
     if (vote === "YesVote") {
       await db.collection("Comments").findOneAndUpdate(filter, {
-        $set: { voteCount: record.voteCount + 1 },
+        $set: { voteCount: record.voteCount + 1, voters: votersValue },
       });
     }
 
     if (vote === "NoVote") {
       await db.collection("Comments").findOneAndUpdate(filter, {
-        $set: { voteCount: record.voteCount - 1 },
+        $set: { voteCount: record.voteCount - 1, voters: votersValue },
       });
     }
   } else {
@@ -107,12 +119,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       voteCount: 1,
       iconUrl: message.author.avatarURL({ format: "png", size: 128 }),
       dateOfSubmission: new Date(),
+      voters: votersValue,
     });
 
     db.collection("Comments").insertOne(newRecord);
   }
   await interaction.reply({
-    content: "Thanks for the vote dickhead",
+    content: `Thanks for voting for ${message.author.username}'s comment!`,
     ephemeral: true,
   });
 });
