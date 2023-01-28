@@ -7,6 +7,9 @@ const {
   Partials,
   Events,
   EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require("discord.js");
 
 const client = new Client({
@@ -18,7 +21,7 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-const Comment = require("./events/database/models");
+const Comment = require("../events/database/models.js");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -32,7 +35,7 @@ db.once("open", function () {
 
 client.login(process.env.DISCORD_TOKEN);
 
-const eventsPath = path.join(__dirname, "events");
+const eventsPath = path.join(__dirname, "/../events");
 const eventFiles = fs
   .readdirSync(eventsPath)
   .filter((file) => file.endsWith(".js"));
@@ -47,33 +50,53 @@ for (const file of eventFiles) {
   }
 }
 
-const alreadyVoted = new EmbedBuilder().setDescription(
-  "You have already voted"
-);
-const yesVote = new EmbedBuilder().setDescription(
-  "Your 👍 vote has been recorded, cheers!"
-);
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isMessageContextMenuCommand()) return;
 
-const noVote = new EmbedBuilder().setDescription(
-  "You 👎 has been recorded, cheers!"
-);
+  const channel = interaction.client.channels.cache.get(interaction.channelId);
+  const message = await channel.messages.fetch(interaction.targetId);
 
-const alreadyOnBestOf = new EmbedBuilder().setDescription(
-  "This comment is already in the best of list!"
-);
+  if (message.content.length <= 0) {
+    interaction.reply({
+      content: "You can't nominate a message that doesn't include text",
+      ephemeral: true,
+    });
+  }
 
-const passedIntoBestOf = new EmbedBuilder().setDescription(
-  "Your vote was the final needed to add this comment to the best of list, nice work!"
-);
+  const nominatedMessage = new EmbedBuilder()
+    .setDescription(message.content || " ")
+    .setAuthor({
+      name: message.author.username,
+      iconURL: message.author.avatarURL(),
+    })
+    .setColor("#13f857");
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel("I Agree!")
+      .setCustomId(`YesVote -${message.id}`)
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("👍"),
+    new ButtonBuilder()
+      .setLabel("I Disagree")
+      .setCustomId(`NoVote -${message.id}`)
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji("👎")
+  );
+
+  await interaction.reply({
+    content: `${interaction.user.username} has nominated the following message to be added to the best of list`,
+    embeds: [nominatedMessage],
+    components: [row],
+  });
+});
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isButton()) return;
   let vote = interaction.customId.split("-")[0].trim();
-  let key = interaction.customId.split("-")[1].trim();
-  let messageIdValue = key.split("/")[key.split("/").length - 1];
-  let channelIdValue = key.split("/")[key.split("/").length - 2];
-  let serverIdValue = key.split("/")[key.split("/").length - 3];
-  let channel = interaction.client.channels.cache.get(channelIdValue);
+  let messageIdValue = interaction.customId.split("-")[1].trim();
+  let serverIdValue = interaction.guildId;
+  let channel = interaction.client.channels.cache.get(interaction.channelId);
   let message = await channel.messages.fetch(messageIdValue);
 
   // If the comment has never been nominated before add an initial record
@@ -132,7 +155,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 client.commands = new Collection();
 
-const commandsPath = path.join(__dirname, "commands");
+const commandsPath = path.join(__dirname, "/../commands");
 const commandFiles = fs
   .readdirSync(commandsPath)
   .filter((file) => file.endsWith(".js"));

@@ -16,6 +16,15 @@ for (const file of commandFiles) {
   commands.push(command.data.toJSON());
 }
 
+const contextFiles = fs
+  .readdirSync("./context")
+  .filter((file) => file.endsWith(".js"));
+
+for (const file of contextFiles) {
+  const context = require(`./context/${file}`);
+  commands.push(context.data.toJSON());
+}
+
 // Construct and prepare an instance of the REST module
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
