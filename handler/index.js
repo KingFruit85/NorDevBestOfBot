@@ -26,14 +26,14 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const mongoose = require("mongoose");
-mongoose.connect($DATABASE_CONNECTION_STRING);
+mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
   console.log("Connected successfully");
 });
 
-client.login($DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN);
 
 const eventsPath = path.join(__dirname, "/../events");
 const eventFiles = fs

@@ -21,8 +21,8 @@ module.exports = {
     console.log(`Ready! Logged in as ${client.user.tag}`);
 
     var monthlyBestOfCommentsTask = schedule("0 9 1 * *", async () => {
-      const channel = client.channels.cache.get($GENERAL_CHANNEL_ID);
-      let embed = await PostMonthlyTopComments($GENERAL_CHANNEL_ID);
+      const channel = client.channels.cache.get(process.env.GENERAL_CHANNEL_ID);
+      let embed = await PostMonthlyTopComments(process.env.GENERAL_CHANNEL_ID);
       channel.send({ embeds: [embed] });
     });
 

@@ -26,7 +26,7 @@ for (const file of contextFiles) {
 }
 
 // Construct and prepare an instance of the REST module
-const rest = new REST({ version: "10" }).setToken($DISCORD_TOKEN);
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 // and deploy your commands!
 (async () => {
@@ -44,7 +44,10 @@ const rest = new REST({ version: "10" }).setToken($DISCORD_TOKEN);
     //  );
 
     const data = await rest.put(
-      Routes.applicationGuildCommands($CLIENT_ID, $GUILD_ID),
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
       { body: commands }
     );
 
