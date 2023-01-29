@@ -1,12 +1,8 @@
 {
   "dependencies": {
-    "@keyv/mongo": "^2.1.8",
-    "@keyvhq/core": "^1.6.14",
-    "@keyvhq/mongo": "^1.6.25",
-    "ascii-table": "^0.0.9",
     "discord.js": "^14.7.1",
     "dotenv": "^16.0.3",
-    "keyv": "^4.5.2",
-    "mongoose": "^6.8.1"
+    "mongoose": "^6.8.1",
+    "node-cron": "^3.0.2"
   }
 }

@@ -26,14 +26,14 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const mongoose = require("mongoose");
-mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
+mongoose.connect($DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
   console.log("Connected successfully");
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login($DISCORD_TOKEN);
 
 const eventsPath = path.join(__dirname, "/../events");
 const eventFiles = fs
@@ -57,7 +57,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const message = await channel.messages.fetch(interaction.targetId);
 
   if (message.content.length <= 0) {
-    interaction.reply({
+    return await interaction.reply({
       content: "You can't nominate a message that doesn't include text",
       ephemeral: true,
     });
@@ -84,7 +84,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       .setEmoji("👎")
   );
 
-  await interaction.reply({
+  return await interaction.reply({
     content: `${interaction.user.username} has nominated the following message to be added to the best of list`,
     embeds: [nominatedMessage],
     components: [row],
@@ -147,7 +147,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     db.collection("Comments").insertOne(newRecord);
   }
-  await interaction.reply({
+  return await interaction.reply({
     content: `Thanks for voting for ${message.author.username}'s comment!`,
     ephemeral: true,
   });

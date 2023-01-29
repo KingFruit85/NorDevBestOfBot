@@ -20,12 +20,5 @@ module.exports = {
       console.error(`Error executing ${interaction.commandName}`);
       console.error(error);
     }
-
-    // Context Menu Handling
-    if (interaction.isContextMenu()) {
-      await interaction.deferReply({ ephemeral: false });
-      const command = client.slashCommands.get(interaction.commandName);
-      if (command) command.run(client, interaction);
-    }
   },
 };

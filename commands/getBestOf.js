@@ -1,11 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder, User } = require("discord.js");
-const AsciiTable = require("ascii-table");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
 const mongoose = require("mongoose");
-mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
+mongoose.connect($DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
@@ -64,7 +63,7 @@ module.exports = {
       );
     });
 
-    await interaction.reply({
+    return await interaction.reply({
       embeds: [exampleEmbed],
     });
   },
