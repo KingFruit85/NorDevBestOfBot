@@ -18,7 +18,7 @@ module.exports = {
 
   async execute(interaction) {
     let topComments = await db
-      .collection("Comments")
+      .collection(interaction.guildId)
       .find()
       .sort({ voteCount: -1 })
       .limit(5)
