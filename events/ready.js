@@ -14,20 +14,29 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+const _guild = "";
+
 module.exports = {
   name: Events.ClientReady,
   once: true,
   execute(client) {
     console.log(`Ready! Logged in as ${client.user.tag}`);
+    let defaultChannel = "";
+
+    client.on(Events.GuildCreate, async (guild) => {
+      _guild = guild;
+
+      defaultChannel = guild.channels
+        .filter((c) => c.type === "text")
+        .find((x) => x.position == 0);
+    });
 
     var monthlyBestOfCommentsTask = schedule("0 9 1 * *", async () => {
-      const channel = client.channels.cache.get(process.env.GENERAL_CHANNEL_ID);
-      let embed = await PostMonthlyTopComments(process.env.GENERAL_CHANNEL_ID);
+      const channel = client.channels.cache.get(defaultChannel.id);
+      let embed = await PostMonthlyTopComments(defaultChannel.id);
       channel.send({ embeds: [embed] });
     });
 
     monthlyBestOfCommentsTask.start();
   },
 };
-
-// son is awake

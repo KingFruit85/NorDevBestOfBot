@@ -63,6 +63,35 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   }
 
+  if (message.author.bot) {
+    return await interaction.reply({
+      content: "You can't nominate a bot message",
+      ephemeral: true,
+    });
+  }
+
+  const persistedComment = await db
+    .collection("Comments")
+    .find({ messageId: message.id })
+    .toArray();
+
+  if (persistedComment[0]) {
+    const messageLinkButton = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Take me to the message")
+        .setStyle(ButtonStyle.Link)
+        .setURL(
+          `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`
+        )
+    );
+
+    return await interaction.reply({
+      content: "That message is already on the best of list!",
+      ephemeral: true,
+      components: [messageLinkButton],
+    });
+  }
+
   const nominatedMessage = new EmbedBuilder()
     .setDescription(message.content || " ")
     .setAuthor({
@@ -98,6 +127,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
   let serverIdValue = interaction.guildId;
   let channel = interaction.client.channels.cache.get(interaction.channelId);
   let message = await channel.messages.fetch(messageIdValue);
+
+  if (interaction.customId == "messageLinkButton") {
+  }
 
   // If the comment has never been nominated before add an initial record
   const record = await db
@@ -135,6 +167,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     console.log("didn't find record, adding new one!");
 
     const newRecord = new Comment({
+      messageLink: interaction.messageLink,
       messageId: messageIdValue,
       serverId: serverIdValue,
       userName: message.author.username,

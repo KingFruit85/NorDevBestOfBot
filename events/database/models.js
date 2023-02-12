@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const CommentSchema = new mongoose.Schema({
+  messageLink: {
+    type: String,
+    required: true,
+  },
   messageId: {
     type: String,
     required: true,
