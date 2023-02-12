@@ -71,7 +71,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   const persistedComment = await db
-    .collection("Comments")
+    .collection(interaction.guildId)
     .find({ messageId: message.id })
     .toArray();
 
@@ -148,13 +148,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
   const filter = { messageId: messageIdValue };
   if (record) {
     if (vote === "YesVote") {
-      await db.collection("Comments").findOneAndUpdate(filter, {
+      await db.collection(interaction.guildId).findOneAndUpdate(filter, {
         $set: { voteCount: record.voteCount + 1, voters: votersValue },
       });
     }
 
     if (vote === "NoVote") {
-      await db.collection("Comments").findOneAndUpdate(filter, {
+      await db.collection(interaction.guildId).findOneAndUpdate(filter, {
         $set: { voteCount: record.voteCount - 1, voters: votersValue },
       });
     }
@@ -171,7 +171,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       voters: votersValue,
     });
 
-    db.collection("Comments").insertOne(newRecord);
+    db.collection(interaction.guildId).insertOne(newRecord);
   }
   return await interaction.reply({
     content: `Thanks for voting for ${message.author.username}'s comment!`,

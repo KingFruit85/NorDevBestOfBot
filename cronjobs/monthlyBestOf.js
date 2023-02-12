@@ -27,10 +27,11 @@ db.once("open", function () {
 });
 
 async function PostMonthlyTopComments(channelId) {
+  console.log(client);
   const channel = client.channels.cache.get(channelId);
 
   const topComments = await db
-    .collection("Comments")
+    .collection(mongoose.model.Comments)
     .find()
     .sort({ voteCount: -1 })
     .limit(5)
@@ -74,7 +75,6 @@ async function PostMonthlyTopComments(channelId) {
     );
   });
   return topCommentsEmbed;
-  channel.send({ embeds: topCommentsEmbed });
 }
 
 module.exports = PostMonthlyTopComments;
