@@ -80,9 +80,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       new ButtonBuilder()
         .setLabel("Take me to the message")
         .setStyle(ButtonStyle.Link)
-        .setURL(
-          `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`
-        )
+        .setURL(persistedComment[0].messageLink)
     );
 
     return await interaction.reply({
@@ -139,7 +137,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
   let votersValue = record ? record.voters : [];
 
   if (votersValue.includes(interaction.user.username)) {
-    console.log("User already voted!");
     return await interaction.reply({
       content: "You have already voted for this message, you cannot vote again",
       ephemeral: true,
@@ -150,8 +147,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   const filter = { messageId: messageIdValue };
   if (record) {
-    console.log("Found record!");
-
     if (vote === "YesVote") {
       await db.collection("Comments").findOneAndUpdate(filter, {
         $set: { voteCount: record.voteCount + 1, voters: votersValue },
@@ -164,10 +159,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
   } else {
-    console.log("didn't find record, adding new one!");
-
     const newRecord = new Comment({
-      messageLink: interaction.messageLink,
+      messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
       messageId: messageIdValue,
       serverId: serverIdValue,
       userName: message.author.username,
