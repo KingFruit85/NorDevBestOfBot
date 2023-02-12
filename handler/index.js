@@ -131,7 +131,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   // If the comment has never been nominated before add an initial record
   const record = await db
-    .collection("Comments")
+    .collection(serverIdValue)
     .findOne({ messageId: messageIdValue });
 
   let votersValue = record ? record.voters : [];
