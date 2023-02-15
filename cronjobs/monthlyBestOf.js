@@ -26,18 +26,31 @@ db.once("open", function () {
   console.log("Connected successfully");
 });
 
-async function PostMonthlyTopComments(channelId) {
-  console.log(client);
-  const channel = client.channels.cache.get(channelId);
+async function PostMonthlyTopComments() {
+  const date = new Date();
+  const startDateOfCurrentMonth = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    1
+  );
+  const lastDayOfCurrentMonth = new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0
+  );
 
   const topComments = await db
     .collection(mongoose.model.Comments)
-    .find()
+    .find({
+      dateOfSubmission: {
+        $gte: startDateOfCurrentMonth,
+        $lt: lastDayOfCurrentMonth,
+      },
+    })
     .sort({ voteCount: -1 })
     .limit(5)
     .toArray();
 
-  const date = new Date();
   const month = date.toLocaleString("default", { month: "long" });
   const year = date.getFullYear();
 

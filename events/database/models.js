@@ -31,7 +31,7 @@ const CommentSchema = new mongoose.Schema({
   },
   dateOfSubmission: {
     type: Date,
-    required: false,
+    required: true,
   },
   voters: {
     type: Array,
