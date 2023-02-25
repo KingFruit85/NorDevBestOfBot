@@ -51,132 +51,157 @@ for (const file of eventFiles) {
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isMessageContextMenuCommand()) return;
+  if (interaction.isMessageContextMenuCommand()) {
+    const channel = interaction.client.channels.cache.get(
+      interaction.channelId
+    );
+    const message = await channel.messages.fetch(interaction.targetId);
+    let imageAttachmentUrls = [];
 
-  const channel = interaction.client.channels.cache.get(interaction.channelId);
-  const message = await channel.messages.fetch(interaction.targetId);
+    if (message.attachments.size > 0) {
+      message.attachments.forEach((attachment) => {
+        if (attachment.contentType.includes("image")) {
+          imageAttachmentUrls.push(attachment.url);
+        }
+      });
+    }
 
-  if (message.content.length <= 0) {
-    return await interaction.reply({
-      content: "You can't nominate a message that doesn't include text",
-      ephemeral: true,
-    });
-  }
+    if (message.author.bot) {
+      return await interaction.reply({
+        content: "You can't nominate a bot message",
+        ephemeral: true,
+      });
+    }
 
-  if (message.author.bot) {
-    return await interaction.reply({
-      content: "You can't nominate a bot message",
-      ephemeral: true,
-    });
-  }
+    const persistedComment = await db
+      .collection(interaction.guildId)
+      .find({ messageId: message.id })
+      .toArray();
 
-  const persistedComment = await db
-    .collection(interaction.guildId)
-    .find({ messageId: message.id })
-    .toArray();
+    if (persistedComment[0]) {
+      const messageLinkButton = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setLabel("Take me to the message")
+          .setStyle(ButtonStyle.Link)
+          .setURL(persistedComment[0].messageLink)
+      );
 
-  if (persistedComment[0]) {
-    const messageLinkButton = new ActionRowBuilder().addComponents(
+      return await interaction.reply({
+        content: "That message is already on the best of list!",
+        ephemeral: true,
+        components: [messageLinkButton],
+      });
+    }
+
+    let nominatedMessage;
+
+    // With image
+    if (message.attachments.size > 0) {
+      nominatedMessage = new EmbedBuilder()
+        .setDescription(message.content || " ")
+        .setAuthor({
+          name: `${message.author.username} (${message.author.tag})`,
+          iconURL: message.author.avatarURL(),
+        })
+        .setColor("#13f857")
+        .setImage(message.attachments.first().url);
+    }
+
+    if (message.attachments.size === 0) {
+      nominatedMessage = new EmbedBuilder()
+        .setDescription(message.content || " ")
+        .setAuthor({
+          name: `${message.author.username} (${message.author.tag})`,
+          iconURL: message.author.avatarURL(),
+        })
+        .setColor("#13f857");
+    }
+
+    const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setLabel("Take me to the message")
-        .setStyle(ButtonStyle.Link)
-        .setURL(persistedComment[0].messageLink)
+        .setLabel("I Agree!")
+        .setCustomId(`YesVote -${message.id}`)
+        .setStyle(ButtonStyle.Success)
+        .setEmoji("👍"),
+      new ButtonBuilder()
+        .setLabel("I Disagree")
+        .setCustomId(`NoVote -${message.id}`)
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji("👎")
     );
 
     return await interaction.reply({
-      content: "That message is already on the best of list!",
-      ephemeral: true,
-      components: [messageLinkButton],
+      content: `${interaction.user.username} has nominated the following message to be added to the best of list`,
+      embeds: [nominatedMessage],
+      components: [row],
     });
   }
 
-  const nominatedMessage = new EmbedBuilder()
-    .setDescription(message.content || " ")
-    .setAuthor({
-      name: message.author.username,
-      iconURL: message.author.avatarURL(),
-    })
-    .setColor("#13f857");
+  if (interaction.isButton()) {
+    let vote = interaction.customId.split("-")[0].trim();
+    let messageIdValue = interaction.customId.split("-")[1].trim();
+    let serverIdValue = interaction.guildId;
+    let channel = interaction.client.channels.cache.get(interaction.channelId);
+    let message = await channel.messages.fetch(messageIdValue);
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setLabel("I Agree!")
-      .setCustomId(`YesVote -${message.id}`)
-      .setStyle(ButtonStyle.Success)
-      .setEmoji("👍"),
-    new ButtonBuilder()
-      .setLabel("I Disagree")
-      .setCustomId(`NoVote -${message.id}`)
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji("👎")
-  );
+    if (interaction.customId == "messageLinkButton") {
+    }
 
-  return await interaction.reply({
-    content: `${interaction.user.username} has nominated the following message to be added to the best of list`,
-    embeds: [nominatedMessage],
-    components: [row],
-  });
-});
+    // If the comment has never been nominated before add an initial record
+    const record = await db
+      .collection(interaction.guildId)
+      .findOne({ messageId: messageIdValue });
 
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton()) return;
-  let vote = interaction.customId.split("-")[0].trim();
-  let messageIdValue = interaction.customId.split("-")[1].trim();
-  let serverIdValue = interaction.guildId;
-  let channel = interaction.client.channels.cache.get(interaction.channelId);
-  let message = await channel.messages.fetch(messageIdValue);
+    let votersValue = record ? record.voters : [];
 
-  if (interaction.customId == "messageLinkButton") {
-  }
+    if (votersValue.includes(interaction.user.username)) {
+      return await interaction.reply({
+        content:
+          "You have already voted for this message, you cannot vote again",
+        ephemeral: true,
+      });
+    }
 
-  // If the comment has never been nominated before add an initial record
-  const record = await db
-    .collection(interaction.guildId)
-    .findOne({ messageId: messageIdValue });
+    votersValue.push(interaction.user.username);
 
-  let votersValue = record ? record.voters : [];
+    const filter = { messageId: messageIdValue };
+    if (record) {
+      if (vote === "YesVote") {
+        await db.collection(interaction.guildId).findOneAndUpdate(filter, {
+          $set: { voteCount: record.voteCount + 1, voters: votersValue },
+        });
+      }
 
-  if (votersValue.includes(interaction.user.username)) {
+      if (vote === "NoVote") {
+        await db.collection(interaction.guildId).findOneAndUpdate(filter, {
+          $set: { voteCount: record.voteCount - 1, voters: votersValue },
+        });
+      }
+    } else {
+      let imageUrlLink =
+        message.attachments.size > 0 ? message.attachments.first().url : " ";
+
+      const newRecord = new Comment({
+        messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
+        messageId: messageIdValue,
+        serverId: serverIdValue,
+        userName: message.author.username,
+        userTag: message.author.tag,
+        comment: message.content,
+        voteCount: 1,
+        iconUrl: message.author.avatarURL({ format: "png", size: 128 }),
+        dateOfSubmission: new Date(),
+        imageUrl: imageUrlLink,
+        voters: votersValue,
+      });
+
+      db.collection(interaction.guildId).insertOne(newRecord);
+    }
     return await interaction.reply({
-      content: "You have already voted for this message, you cannot vote again",
+      content: `Thanks for voting for ${message.author.username}'s comment!`,
       ephemeral: true,
     });
   }
-
-  votersValue.push(interaction.user.username);
-
-  const filter = { messageId: messageIdValue };
-  if (record) {
-    if (vote === "YesVote") {
-      await db.collection(interaction.guildId).findOneAndUpdate(filter, {
-        $set: { voteCount: record.voteCount + 1, voters: votersValue },
-      });
-    }
-
-    if (vote === "NoVote") {
-      await db.collection(interaction.guildId).findOneAndUpdate(filter, {
-        $set: { voteCount: record.voteCount - 1, voters: votersValue },
-      });
-    }
-  } else {
-    const newRecord = new Comment({
-      messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
-      messageId: messageIdValue,
-      serverId: serverIdValue,
-      userName: message.author.username,
-      comment: message.content,
-      voteCount: 1,
-      iconUrl: message.author.avatarURL({ format: "png", size: 128 }),
-      dateOfSubmission: new Date(),
-      voters: votersValue,
-    });
-
-    db.collection(interaction.guildId).insertOne(newRecord);
-  }
-  return await interaction.reply({
-    content: `Thanks for voting for ${message.author.username}'s comment!`,
-    ephemeral: true,
-  });
 });
 
 client.commands = new Collection();

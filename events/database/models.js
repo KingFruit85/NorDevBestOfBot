@@ -17,6 +17,10 @@ const CommentSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  userTag: {
+    type: String,
+    required: true,
+  },
   comment: {
     type: String,
     required: true,
@@ -36,6 +40,10 @@ const CommentSchema = new mongoose.Schema({
   voters: {
     type: Array,
     required: true,
+  },
+  imageUrl: {
+    type: String,
+    required: false,
   },
 });
 
