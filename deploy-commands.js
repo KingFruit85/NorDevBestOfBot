@@ -12,20 +12,26 @@ const commandFiles = fs
 
 // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 for (const file of commandFiles) {
+  console.log(`loading ${file}`);
   const command = require(`./commands/${file}`);
   commands.push(command.data.toJSON());
 }
+
+console.log("reading context file");
 
 const contextFiles = fs
   .readdirSync("./context")
   .filter((file) => file.endsWith(".js"));
 
 for (const file of contextFiles) {
+  console.log(`loading ${file}`);
+
   const context = require(`./context/${file}`);
   commands.push(context.data.toJSON());
 }
 
 // Construct and prepare an instance of the REST module
+console.log("Create REST module");
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 // and deploy your commands!

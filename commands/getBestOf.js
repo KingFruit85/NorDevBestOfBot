@@ -8,8 +8,10 @@ mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
-  console.log("Connected successfully");
+  console.log("Get Best Of Connected successfully");
 });
+
+const postColours = ["#F44336", "#00BCD4", "#9C27B0", "#FFC107", "#4CAF50"];
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,6 +19,7 @@ module.exports = {
     .setDescription("Returns the top ten best of comments"),
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: false });
     let topComments = await db
       .collection(interaction.guildId)
       .find()
@@ -36,23 +39,45 @@ module.exports = {
 
     topFiveCommentEmbeds.push(headerMessage);
 
+    counter = 0;
     topComments.forEach((comment) => {
-      let _comment = new EmbedBuilder()
-        .setDescription(comment.comment)
-        .setAuthor({
-          name: `${comment.userName} (${comment.userTag})`,
-          iconURL: comment.iconUrl,
-        })
-        .setColor("#FFD700");
+      if (comment.quotedMessage) {
+        let _quotedComment = new EmbedBuilder()
+          .setTitle(
+            `A conversation between ${comment.quotedMessageAuthor} and ${comment.userName}`
+          )
+          .setDescription(comment.quotedMessage)
+          .setAuthor({
+            name: comment.quotedMessageAuthor,
+            iconURL: comment.quotedMessageAvatarLink,
+          })
+          .setColor(postColours[counter]);
 
-      if (comment.imageUrl && comment.imageUrl.includes("http")) {
-        _comment.setImage(comment.imageUrl);
+        if (comment.quotedMessageImage) {
+          _quotedComment.setImage(comment.quotedMessageImage);
+        }
+
+        topFiveCommentEmbeds.push(_quotedComment);
       }
 
-      topFiveCommentEmbeds.push(_comment);
+      let _votedComment = new EmbedBuilder()
+        .setDescription(comment.comment)
+        .setAuthor({
+          name: comment.userName,
+          iconURL: comment.iconUrl,
+        })
+        .setColor(postColours[counter])
+        .setFooter({ text: `Votes: ${comment.voteCount}` });
+
+      if (comment.imageUrl && comment.imageUrl.includes("http")) {
+        _votedComment.setImage(comment.imageUrl);
+      }
+
+      topFiveCommentEmbeds.push(_votedComment);
+      counter++;
     });
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: topFiveCommentEmbeds,
     });
   },

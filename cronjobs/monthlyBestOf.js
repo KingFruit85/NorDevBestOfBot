@@ -23,11 +23,17 @@ mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
-  console.log("Connected successfully");
+  console.log("MonthlyBestOf Connected successfully");
 });
 
 async function PostMonthlyTopComments() {
+  let topFiveCommentEmbeds = [];
+  const postColours = ["#F44336", "#00BCD4", "#9C27B0", "#FFC107", "#4CAF50"];
   const date = new Date();
+
+  const month = date.toLocaleString("default", { month: "long" });
+  const year = date.getFullYear();
+
   const startDateOfCurrentMonth = new Date(
     date.getFullYear(),
     date.getMonth(),
@@ -40,7 +46,7 @@ async function PostMonthlyTopComments() {
   );
 
   const topComments = await db
-    .collection(mongoose.model.Comments)
+    .collection(interaction.guildId)
     .find({
       dateOfSubmission: {
         $gte: startDateOfCurrentMonth,
@@ -51,43 +57,58 @@ async function PostMonthlyTopComments() {
     .limit(5)
     .toArray();
 
-  const month = date.toLocaleString("default", { month: "long" });
-  const year = date.getFullYear();
+  if (topComments.length === 0) {
+    return await interaction.reply({
+      content: "There have been no comments nominated this month, sad times",
+      ephemeral: true,
+    });
+  }
 
-  const topCommentsEmbed = new EmbedBuilder()
+  const headerMessage = new EmbedBuilder()
     .setColor([255, 0, 255])
-    .setTitle(`The top 5 comments from ${month} ${year}`)
-    .addFields(
-      { name: "User", value: " ", inline: true },
-      { name: "Votes", value: " ", inline: true },
-      { name: "Comment", value: " ", inline: true }
-    )
-    .setThumbnail(
-      "https://cdn.discordapp.com/attachments/680873189106384988/1065930668825116682/PXL_20230120_094737132.jpg"
-    )
+    .setTitle(`The top 5 comments for ${month} ${year}`);
 
-    .setTimestamp();
+  topFiveCommentEmbeds.push(headerMessage);
 
-  topComments.forEach((post) => {
-    topCommentsEmbed.addFields(
-      {
-        name: " ",
-        value: post.userName,
-        inline: true,
-      },
-      {
-        name: " ",
-        value: post.voteCount.toString(),
-        inline: true,
-      },
-      {
-        name: " ",
-        value: post.comment,
-        inline: true,
+  counter = 0;
+  topComments.forEach((comment) => {
+    if (comment.quotedMessage) {
+      let _quotedComment = new EmbedBuilder()
+        .setTitle(
+          `A conversation between ${comment.quotedMessageAuthor} and ${comment.userName}`
+        )
+        .setDescription(comment.quotedMessage)
+        .setAuthor({
+          name: comment.quotedMessageAuthor,
+          iconURL: comment.quotedMessageAvatarLink,
+        })
+        .setColor(postColours[counter]);
+
+      if (comment.quotedMessageImage) {
+        _quotedComment.setImage(comment.quotedMessageImage);
       }
-    );
+
+      topFiveCommentEmbeds.push(_quotedComment);
+    }
+
+    let _votedComment = new EmbedBuilder()
+      .setDescription(comment.comment)
+      .setAuthor({
+        name: comment.userName,
+        iconURL: comment.iconUrl,
+      })
+      .setColor(postColours[counter])
+      .setFooter({ text: `Votes: ${comment.voteCount}` });
+
+    if (comment.imageUrl && comment.imageUrl.includes("http")) {
+      _votedComment.setImage(comment.imageUrl);
+    }
+
+    topFiveCommentEmbeds.push(_votedComment);
+    counter++;
   });
-  return topCommentsEmbed;
+
+  return topFiveCommentEmbeds;
 }
 
 module.exports = PostMonthlyTopComments;

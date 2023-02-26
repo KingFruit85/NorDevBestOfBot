@@ -30,7 +30,7 @@ mongoose.connect(process.env.DATABASE_CONNECTION_STRING);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error: "));
 db.once("open", function () {
-  console.log("Connected successfully");
+  console.log("Index Connected successfully");
 });
 
 client.login(process.env.DISCORD_TOKEN);
@@ -179,8 +179,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     } else {
       let imageUrlLink =
-        message.attachments.size > 0 ? message.attachments.first().url : " ";
+        message.attachments.size > 0 ? message.attachments.first().url : null;
 
+      let quotedMessageValue = null;
+      let quotedMessageAuthorValue = null;
+      let quotedMessageAvatarValue = null;
+      let quotedMessageImageValue = null;
+
+      if (message.reference) {
+        quotedMessageValue = await message.channel.messages.fetch(
+          message.reference.messageId
+        );
+        console.log(quotedMessageValue.author.username); // Prints out 'KFruit'
+        quotedMessageAuthorValue = quotedMessageValue.author.username; //  TypeError: Cannot read properties of undefined (reading 'username')
+        quotedMessageAvatarValue = quotedMessageValue.author.avatarURL();
+        quotedMessageImageValue =
+          quotedMessageValue.attachments.size > 0
+            ? quotedMessageValue.attachments.first().url
+            : null;
+      }
       const newRecord = new Comment({
         messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
         messageId: messageIdValue,
@@ -193,6 +210,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
         dateOfSubmission: new Date(),
         imageUrl: imageUrlLink,
         voters: votersValue,
+        quotedMessage: quotedMessageValue,
+        quotedMessageAuthor: quotedMessageAuthorValue,
+        quotedMessageAvatarLink: quotedMessageAvatarValue,
+        quotedMessageImage: quotedMessageImageValue,
       });
 
       db.collection(interaction.guildId).insertOne(newRecord);

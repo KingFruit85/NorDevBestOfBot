@@ -45,6 +45,22 @@ const CommentSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  quotedMessage: {
+    type: String,
+    required: false,
+  },
+  quotedMessageAuthor: {
+    type: String,
+    required: false,
+  },
+  quotedMessageAvatarLink: {
+    type: String,
+    required: false,
+  },
+  quotedMessageImage: {
+    type: String,
+    required: false,
+  },
 });
 
 const Comments =
