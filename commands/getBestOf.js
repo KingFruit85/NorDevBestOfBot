@@ -65,7 +65,7 @@ module.exports = {
       }
 
       let _votedComment = new EmbedBuilder()
-        .setDescription(comment.comment)
+        .setDescription(comment.comment || " ")
         .setAuthor({
           name: comment.userName,
           iconURL: comment.iconUrl,
