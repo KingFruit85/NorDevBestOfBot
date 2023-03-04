@@ -16,7 +16,9 @@ const postColours = ["#F44336", "#00BCD4", "#9C27B0", "#FFC107", "#4CAF50"];
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("getbestof")
-    .setDescription("Returns the top ten best of comments"),
+    .setDescription(
+      "Returns the top 5 best of comments of all time on from this server"
+    ),
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: false });
@@ -27,15 +29,17 @@ module.exports = {
       .limit(5)
       .toArray();
 
-    let topFiveCommentEmbeds = [];
+    if (topComments.length === 0) {
+      await interaction.editReply({
+        content: "There have been no nominated comments this month",
+      });
+    }
 
-    const date = new Date();
-    const month = date.toLocaleString("default", { month: "long" });
-    const year = date.getFullYear();
+    let topFiveCommentEmbeds = [];
 
     const headerMessage = new EmbedBuilder()
       .setColor([255, 0, 255])
-      .setTitle(`The top 5 comments from ${month} ${year}`);
+      .setTitle(`The top 5 comments on this server`);
 
     topFiveCommentEmbeds.push(headerMessage);
 
@@ -77,7 +81,7 @@ module.exports = {
       counter++;
     });
 
-    await interaction.editReply({
+    return await interaction.editReply({
       embeds: topFiveCommentEmbeds,
     });
   },

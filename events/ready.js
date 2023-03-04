@@ -31,12 +31,13 @@ module.exports = {
         .find((x) => x.position == 0);
     });
 
-    var monthlyBestOfCommentsTask = schedule("0 9 1 * *", async () => {
-      const channel = client.channels.cache.get(defaultChannel.id);
-      let embed = await PostMonthlyTopComments(defaultChannel.id);
-      channel.send({ embeds: [embed] });
-    });
+    // var monthlyBestOfCommentsTask = schedule("0 9 1 * *", async () => {
+    //   console.log("Posting monthly stats");
+    //   const channel = client.channels.cache.get(defaultChannel.id);
+    //   let embed = await PostMonthlyTopComments(defaultChannel.id);
+    //   channel.send({ embeds: [embed] });
+    // });
 
-    monthlyBestOfCommentsTask.start();
+    // monthlyBestOfCommentsTask.start();
   },
 };
