@@ -61,6 +61,14 @@ const CommentSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  nickname: {
+    type: String,
+    required: false,
+  },
+  quotedMessageAuthorNickname: {
+    type: String,
+    required: false,
+  },
 });
 
 const Comments =

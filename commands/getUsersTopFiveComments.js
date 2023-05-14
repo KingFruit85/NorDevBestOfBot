@@ -54,11 +54,15 @@ module.exports = {
       if (comment.quotedMessage) {
         let _quotedComment = new EmbedBuilder()
           .setTitle(
-            `A conversation between ${comment.quotedMessageAuthor} and ${comment.userName}`
+            `A conversation between ${
+              comment.quotedMessageAuthorNickname || comment.quotedMessageAuthor
+            } and ${comment.nickname || comment.userName}`
           )
           .setDescription(comment.quotedMessage)
           .setAuthor({
-            name: comment.quotedMessageAuthor,
+            name:
+              comment.quotedMessageAuthorNickname ||
+              comment.quotedMessageAuthor,
             iconURL: comment.quotedMessageAvatarLink,
           })
           .setColor(postColours[counter]);
@@ -73,7 +77,7 @@ module.exports = {
       let _votedComment = new EmbedBuilder()
         .setDescription(comment.comment || " ")
         .setAuthor({
-          name: comment.userName,
+          name: comment.nickname || comment.userName,
           iconURL: comment.iconUrl,
         })
         .setColor(postColours[counter])

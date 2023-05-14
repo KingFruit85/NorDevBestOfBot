@@ -12,6 +12,8 @@ const {
   ButtonStyle,
 } = require("discord.js");
 
+const helpers = require("../helpers/helpers.js");
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -131,7 +133,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     );
 
     return await interaction.reply({
-      content: `${interaction.user.username} has nominated the following message to be added to the best of list`,
+      content: `${helpers.TryGetUserNickname(
+        interaction.member
+      )} has nominated the following message to be added to the best of list`,
       embeds: [nominatedMessage],
       components: [row],
     });
@@ -185,13 +189,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
       let quotedMessageAuthorValue = null;
       let quotedMessageAvatarValue = null;
       let quotedMessageImageValue = null;
+      let quotedMessageAuthorNickName = null;
 
       if (message.reference) {
         quotedMessageValue = await message.channel.messages.fetch(
           message.reference.messageId
         );
-        console.log(quotedMessageValue.author.username); // Prints out 'KFruit'
-        quotedMessageAuthorValue = quotedMessageValue.author.username; //  TypeError: Cannot read properties of undefined (reading 'username')
+        console.log(quotedMessageValue.author.username);
+        quotedMessageAuthorValue = quotedMessageValue.author.username;
         quotedMessageAvatarValue = quotedMessageValue.author.avatarURL();
         quotedMessageImageValue =
           quotedMessageValue.attachments.size > 0
@@ -214,6 +219,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
         quotedMessageAuthor: quotedMessageAuthorValue,
         quotedMessageAvatarLink: quotedMessageAvatarValue,
         quotedMessageImage: quotedMessageImageValue,
+        nickname: message.member.nickname,
+        quotedMessageAuthorNickname: quotedMessageAuthorNickName,
       });
 
       db.collection(interaction.guildId).insertOne(newRecord);
