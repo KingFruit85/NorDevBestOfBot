@@ -13,6 +13,7 @@ const {
 } = require("discord.js");
 
 const helpers = require("../helpers/helpers.js");
+const generalChannelId = "680873189106384988";
 
 const client = new Client({
   intents: [
@@ -54,6 +55,7 @@ for (const file of eventFiles) {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isMessageContextMenuCommand()) {
+    console.log(interaction.commandName);
     const channel = interaction.client.channels.cache.get(
       interaction.channelId
     );
@@ -132,6 +134,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
         .setEmoji("👎")
     );
 
+    // Post to the general chat
+    const linkToMessage = `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
+    const messageLink = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel("Take me to the message to vote")
+        .setEmoji("➡")
+        .setStyle(ButtonStyle.Link)
+        .setURL(linkToMessage)
+    );
+
+    const ogChannel = interaction.channel.name;
+    await client.channels.fetch(generalChannelId).then((channel) =>
+      channel.send({
+        content: `🔥 It's all popping off in ${ogChannel}! ${helpers.TryGetUserNickname(
+          interaction.member
+        )} has nominated the following message to be added to the best of list 🔥`,
+        embeds: [nominatedMessage],
+        components: [messageLink],
+      })
+    );
+
+    // post in og channel
     return await interaction.reply({
       content: `${helpers.TryGetUserNickname(
         interaction.member
