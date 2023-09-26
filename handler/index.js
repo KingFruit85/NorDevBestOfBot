@@ -243,7 +243,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         quotedMessageAuthor: quotedMessageAuthorValue,
         quotedMessageAvatarLink: quotedMessageAvatarValue,
         quotedMessageImage: quotedMessageImageValue,
-        nickname: message.member.nickname,
+        nickname: message.member.nickname || message.author.username,
         quotedMessageAuthorNickname: quotedMessageAuthorNickName,
       });
 
