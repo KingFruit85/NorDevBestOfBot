@@ -228,14 +228,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
             : null;
       }
 
-      var nickName = message.author.username;
-
-      console.log("message to persist");
-      console.log(message);
-
-      if (message.member.nickname) {
-        nickName = message.member.nickname;
-      }
+      var nickName = helpers.TryGetUserNickname(interaction.member);
 
       const newRecord = new Comment({
         messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
