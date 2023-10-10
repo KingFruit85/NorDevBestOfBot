@@ -227,6 +227,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
             ? quotedMessageValue.attachments.first().url
             : null;
       }
+
+      var nickName = message.author.username;
+
+      console.log("message to persist");
+      console.log(message);
+
+      if (message.member.nickname) {
+        nickName = message.member.nickname;
+      }
+
       const newRecord = new Comment({
         messageLink: `https://discord.com/channels/${interaction.message.guildId}/${interaction.message.channelId}/${interaction.message.id}`,
         messageId: messageIdValue,
@@ -243,7 +253,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         quotedMessageAuthor: quotedMessageAuthorValue,
         quotedMessageAvatarLink: quotedMessageAvatarValue,
         quotedMessageImage: quotedMessageImageValue,
-        nickname: message.member.nickname || message.author.username,
+        nickname: nickName,
         quotedMessageAuthorNickname: quotedMessageAuthorNickName,
       });
 
